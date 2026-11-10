@@ -1,0 +1,147 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net: Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'sultanhaseng@gmail.com'
+      );
+    }
+
+    // Entity Validation Blueprint: TimetableWorkspace
+    function isValidTimetableWorkspace(data) {
+      return data.keys().hasAll([
+        'title',
+        'schoolName',
+        'lastGeneratedAt',
+        'ownerId',
+        'isSharedWorkspace',
+        'teachers',
+        'classes',
+        'subjects',
+        'tahapConfigs',
+        'lessonCards',
+        'scheduledItems',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'title',
+        'schoolName',
+        'lastGeneratedAt',
+        'ownerId',
+        'isSharedWorkspace',
+        'teachers',
+        'classes',
+        'subjects',
+        'tahapConfigs',
+        'lessonCards',
+        'scheduledItems',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.title is string && data.title.size() >= 1 && data.title.size() <= 120 &&
+      data.schoolName is string && data.schoolName.size() >= 1 && data.schoolName.size() <= 160 &&
+      data.lastGeneratedAt is string && data.lastGeneratedAt.size() >= 1 && data.lastGeneratedAt.size() <= 64 &&
+      isValidId(data.ownerId) &&
+      data.isSharedWorkspace is bool &&
+      data.teachers is list && data.teachers.size() >= 1 && data.teachers.size() <= 100 && data.teachers[0] is map &&
+      data.classes is list && data.classes.size() >= 1 && data.classes.size() <= 50 && data.classes[0] is map &&
+      data.subjects is list && data.subjects.size() >= 1 && data.subjects.size() <= 50 && data.subjects[0] is map &&
+      data.tahapConfigs is list && data.tahapConfigs.size() >= 1 && data.tahapConfigs.size() <= 10 && data.tahapConfigs[0] is map &&
+      data.lessonCards is list && data.lessonCards.size() >= 1 && data.lessonCards.size() <= 300 && data.lessonCards[0] is map &&
+      data.scheduledItems is list && data.scheduledItems.size() >= 1 && data.scheduledItems.size() <= 600 && data.scheduledItems[0] is map &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isSyncWorkspaceUpdateAction() {
+      return incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'title',
+          'schoolName',
+          'lastGeneratedAt',
+          'isSharedWorkspace',
+          'teachers',
+          'classes',
+          'subjects',
+          'tahapConfigs',
+          'lessonCards',
+          'scheduledItems',
+          'updatedAt'
+        ]);
+    }
+
+    // Match: /timetables/{timetableId}
+    match /timetables/{timetableId} {
+      allow get: if isVerifiedUser() && isValidId(timetableId) && (
+        resource == null ||
+        existing().ownerId == request.auth.uid ||
+        existing().isSharedWorkspace == true ||
+        isAdmin()
+      );
+      allow list: if isVerifiedUser() && (
+        existing().ownerId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isVerifiedUser() &&
+        isValidId(timetableId) &&
+        isValidTimetableWorkspace(incoming()) &&
+        incoming().ownerId == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if (
+        isVerifiedUser() &&
+        isValidId(timetableId) &&
+        isValidTimetableWorkspace(incoming()) && (
+          (
+            (existing().ownerId == request.auth.uid || existing().isSharedWorkspace == true || isAdmin()) &&
+            isSyncWorkspaceUpdateAction()
+          )
+        )
+      );
+      allow delete: if isVerifiedUser() &&
+        isValidId(timetableId) && (
+          existing().ownerId == request.auth.uid || isAdmin()
+        );
+    }
+
+    // Match: /admins/{adminId}
+    match /admins/{adminId} {
+      allow get: if isVerifiedUser() && isValidId(adminId) && (
+        request.auth.uid == adminId || isAdmin()
+      );
+      allow list: if false;
+      allow create, update, delete: if false;
+    }
+  }
+}

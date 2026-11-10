@@ -1,0 +1,128 @@
+{
+  "entities": {
+    "TimetableWorkspace": {
+      "title": "TimetableWorkspace",
+      "description": "Complete school timetable state synced across all devices including teachers, classes, subjects, tahap period configurations, lesson cards, and scheduled sessions.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Timetable workspace title",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "schoolName": {
+          "type": "string",
+          "description": "School name displayed on timetable headers",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "lastGeneratedAt": {
+          "type": "string",
+          "description": "Formatted timestamp string of the latest timetable generation",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "UID of the creator who initialized the workspace",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "isSharedWorkspace": {
+          "type": "boolean",
+          "description": "Whether this timetable workspace is shared across school devices with the workspace code"
+        },
+        "teachers": {
+          "type": "array",
+          "description": "List of school teachers and their time-off constraints"
+        },
+        "classes": {
+          "type": "array",
+          "description": "List of school classes (Tahap 1, 2, 3) and their time-off constraints"
+        },
+        "subjects": {
+          "type": "array",
+          "description": "List of subjects, color themes, and subject time-off constraints"
+        },
+        "tahapConfigs": {
+          "type": "array",
+          "description": "Time period slot configurations for Tahap 1, Tahap 2, and Tahap 3"
+        },
+        "lessonCards": {
+          "type": "array",
+          "description": "Lesson cards assigning teachers, subjects, classes, and weekly period blocks"
+        },
+        "scheduledItems": {
+          "type": "array",
+          "description": "Generated conflict-free scheduled timetable items across all days and periods"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the workspace was first created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the workspace was last synced"
+        }
+      },
+      "required": [
+        "title",
+        "schoolName",
+        "lastGeneratedAt",
+        "ownerId",
+        "isSharedWorkspace",
+        "teachers",
+        "classes",
+        "subjects",
+        "tahapConfigs",
+        "lessonCards",
+        "scheduledItems",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Trusted admin registry document keyed by user UID",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Admin user UID",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "role": {
+          "type": "string",
+          "description": "Admin role identifier",
+          "enum": ["admin"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["uid", "role", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/timetables/{timetableId}": {
+      "schema": {
+        "$ref": "#/entities/TimetableWorkspace"
+      },
+      "description": "Synchronized school timetable workspace documents accessible across devices"
+    },
+    "/admins/{adminId}": {
+      "schema": {
+        "$ref": "#/entities/AdminUser"
+      },
+      "description": "Admin lookup collection for privileged access verification"
+    }
+  }
+}

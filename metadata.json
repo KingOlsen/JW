@@ -1,0 +1,8 @@
+{
+  "name": "JADUAL WAKTU PERSEKOLAHAN",
+  "description": "Sistem penjana dan direktori jadual waktu sekolah pintar untuk Jadual Kelas dan Jadual Guru mengikut Tahap 1, 2, dan 3 dengan semakan pertindihan masa sebenar.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
